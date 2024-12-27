@@ -1,0 +1,280 @@
+---
+title: "Bellabeat - Case study"
+author: "Rihards Opuls"
+date: "18/12/2024"
+output: html_document
+---
+
+```{r page_setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<div style="text-align: right;">![](https://bellabeat.com/wp-content/uploads/2023/09/Bellabeat-logo.jpg){width=30%}</div>
+### **Project overview**  
+
+#### **About the company** 
+
+Urška Sršen and Sando Mur founded Bellabeat, a high-tech company that manufactures health-focused smart products.
+Sršen used her background as an artist to develop beautifully designed technology that informs and inspires women around
+the world. Collecting data on activity, sleep, stress, and reproductive health has allowed Bellabeat to empower women with
+knowledge about their own health and habits. Since it was founded in 2013, Bellabeat has grown rapidly and quickly positioned itself as a tech-driven wellness company for women. As a tech orientated company, Bellabeat is interested in data driven recommendations to advance the business.
+<br>
+
+#### **Business task**
+
+Analyse data from non-Bellabeat smart devices in order to gain insights about how customers use their smart watches/fitness trackers. Use these insights to present data driven business recommendations for Bellabeat.
+
+**Questions to answer based on data**
+
+1. What are some trends in smart device usage?
+2. How could these trends apply to Bellabeat customers?
+3. How could these trends help influence Bellabeat marketing strategy?  
+<br>
+
+#### **Key stakeholders**
+
+* Urška Sršen: Bellabeat’s cofounder and Chief Creative Officer
+* Sando Mur: Mathematician and Bellabeat’s cofounder; key member of the Bellabeat executive team
+* Bellabeat marketing analytics team: A team of data analysts responsible for collecting, analyzing, and reporting
+data that helps guide Bellabeat’s marketing strategy.  
+<br>
+
+#### **Data sources used for analysis**
+
+
+**[FitBit Fitness Tracker Data](https://www.kaggle.com/datasets/arashnic/fitbit)** (CC0: Public Domain, dataset made available through Mobius): 
+This Kaggle data set contains personal fitness tracker from thirty fitbit users. Thirty eligible Fitbit users consented to the submission of personal tracker data, including minute-level output for physical activity, heart rate, and sleep monitoring. It includes information about daily activity, steps, and heart rate that can be used to explore users’ habits. Data is downloaded from Kaggle and stored on computer, where it's organized in folders for this case study. All files are in long format. Based on available metadata, this dataset is open for public and free to use. This dataset is important for analysis as it includes a lot of detailed information about Fitbit usage.
+
+**Limitations:**
+
+* Data only consists of 33 users (even though dataset description states that 30 users participated in submission of data), which could be biased and not a good representation of overall population and target audience.
+* Some of the data is missing and incomplete
+* Dataset is outdated at the time of this analysis (data was collected in 2016 and analysis done in 2024)
+* Dataset includes 2 months of data in separate folders. When inspecting available files, folder with first month is missing several files so it won't be used for this study due to incompleteness. Focus will be on data between 12.04.16 and 12.05.16.  
+
+**[Fortune Business Insights](https://www.fortunebusinessinsights.com/fitness-tracker-market-103358)**:
+Article with market analysis where data was gathered between 2019-2022 focusing on global fitness tracker market. Article was last updated on 02/12/2024, therefore it's up to date information at the time of this case study. This article is freely available to anyone, but there's also an option to order and buy more in depth and customized data. For this analysis only open data has been used.  
+
+**Limitations:**
+
+* Survey is focused on North American data, however, it does include a few data points from global market.
+
+**[Pew Research Center survey conducted June 3-17, 2019](https://www.pewresearch.org/short-reads/2020/01/09/about-one-in-five-americans-use-a-smart-watch-or-fitness-tracker/)**:
+This survey was conducted by Pew Reasearch by surveying 4,272 U.S. adults in random sampling survey done by phone or email of U.S. residential addresses. There's a high confidence that this survey is good representation of average population and Pew Reasearch Center explains random sampling process and credibility.  
+
+**Limitations:**
+
+* Survey is outdated at the time of this analysis (Survey was done in 2019 and analysis done in 2024). During this time there has been increase in fitness tracker use based on data about units sold and rising profit of the market segment
+* Survey only accounts for U.S. population and there's no publicly available survey data from UK  
+<br>
+
+#### **R Libraries used for this analysis**
+
+```{r Libraries, warning=FALSE}
+library("tidyverse")
+library("skimr")
+library("janitor")
+library("rmarkdown")
+library("lubridate")
+library("dplyr")
+library("grid")
+library("knitr")
+```
+<br>
+
+#### **Importing datasets to R**
+
+```{r Datasets}
+daily_activity <- read.csv("C:/Users/Rich/Desktop/Learning/Data analyst/Case study/Bellabeat_case_study_28.11.2024/Fitabase Data 12.04.16-12.05.16/dailyActivity_merged.csv")
+daily_sleep <- read.csv("C:/Users/Rich/Desktop/Learning/Data analyst/Case study/Bellabeat_case_study_28.11.2024/Fitabase Data 12.04.16-12.05.16/sleepDay_merged.csv")
+hourly_calories <- read.csv("C:/Users/Rich/Desktop/Learning/Data analyst/Case study/Bellabeat_case_study_28.11.2024/Fitabase Data 12.04.16-12.05.16/hourlyCalories_merged.csv")
+hourly_intensities <- read.csv("C:/Users/Rich/Desktop/Learning/Data analyst/Case study/Bellabeat_case_study_28.11.2024/Fitabase Data 12.04.16-12.05.16/hourlyIntensities_merged.csv")
+hourly_steps <- read.csv("C:/Users/Rich/Desktop/Learning/Data analyst/Case study/Bellabeat_case_study_28.11.2024/Fitabase Data 12.04.16-12.05.16/hourlySteps_merged.csv")
+```
+
+<br>
+
+#### **Data cleaning**
+
+Before progressing with data cleaning I inspected available files in Google Sheets using filters, sorting and pivot tables to see the quality of data files. When exploring every available CSV file I came to conclusion that "dailyActivity_merged" contains all data from "dailyIntensity_merged", "dailyCalories_merged" and "dailySteps_merged". Getting insights only from daily and hourly data will be sufficient for this case study to make data driven conclusions and recommendations. "weightLogInfo_merged" , even though it would be interesting dataset, won't be used as it only contains 8 users which were manually submitted.
+
+**Removing duplicates and rows with missing values**
+
+```{r Duplicate_and_NA_removal}
+daily_activity <- daily_activity %>% distinct() %>% drop_na()
+daily_sleep <- daily_sleep %>% distinct() %>% drop_na()
+hourly_calories <- hourly_calories %>% distinct() %>% drop_na()
+hourly_intensities <- hourly_intensities %>% distinct() %>% drop_na()
+hourly_steps <- hourly_steps %>% distinct() %>% drop_na()
+```
+
+**Assessing unique ID's for each dataset**
+
+```{r Unique_ID}
+skimr::n_unique(daily_activity$Id)
+skimr::n_unique(daily_sleep$Id)
+skimr::n_unique(hourly_calories$Id)
+skimr::n_unique(hourly_intensities$Id)
+skimr::n_unique(hourly_steps$Id)
+```
+As we can see from unique ID's, daily sleep dataset has only 24 unique users, while all other datasets have 33 unique users. This suggests that some users don't use smart device/fitness tracker during the night for sleep tracking. This insight could be useful for final recommendations. To further look into daily sleep data I'll look for any obvious outliers. To do this I'll sort and summarise data by time in bed (some people struggle falling asleep and sleep time can be a lot less than actual time in bed).
+
+```{r daily_sleep_sorted}
+daily_sleep <- daily_sleep[order(daily_sleep$TotalTimeInBed), ]
+head(daily_sleep)
+```
+
+Looking at the ascending results from daily time in bed, we can see that some data shows as little as 61 minutes of bed time per a day (actual sleep is even less). Clearly these results are outliers and incomplete data. For this analysis all results with less than 300 minutes of daily sleep will be removed(Altough on occasion some people might have less than 300 minutes of sleep, they are obvious outliers and likely smart device wasn't even used overnight). Just like data with too small numbers, there are also outliers with too high numbers. I can see that getting this data perfectly accurate won't be possible, but to reduce margin of error, all results with more than 720 minutes of daily time in bed will treated as outliers.
+
+```{r daily_sleep_cleaned}
+daily_sleep <- daily_sleep %>% filter(TotalTimeInBed > 300 & TotalTimeInBed < 720)
+```
+
+When inspecting dataframe about daily activity, I can see some outliers again. There are rows suggesting 0 total steps per day and some rows with 1440 sedentary minutes (full 24h with 0 movement) which clearly are inaccurate. Again, it won't be possible to make this data perfectly clean, but for improved accuracy I will drop rows which show less than 500 steps a day and rows that show more than 1380 minutes (23h) a day as sedentary.
+
+```{r daily_activity_cleaned}
+daily_activity <- daily_activity %>% filter(TotalSteps > 500 & SedentaryMinutes < 1380)
+```
+
+**Inconsistency in date formats**  
+
+When inspecting date and time section of daily activity and daily sleep, I noticed that date formats are not matching and they are in U.S. format. I changed them to matching European format for better readability.
+
+```{r daily_date_modification}
+colnames(daily_activity)[colnames(daily_activity) == "ActivityDate"] <- "Date"
+daily_activity$Date <- mdy(daily_activity$Date)
+daily_activity$Date <- format(daily_activity$Date, "%d/%m/%Y")
+colnames(daily_sleep)[colnames(daily_sleep) == "SleepDay"] <- "Date"
+daily_sleep$Date <- mdy_hms(daily_sleep$Date)
+daily_sleep$Date <- as.Date(daily_sleep$Date)
+daily_sleep$Date <- format(daily_sleep$Date, "%d/%m/%Y")
+```
+
+**Joining tables together**  
+
+I would like to join together hourly calories, intensities and steps for the process of analysis and also change date format to European.
+
+```{r tables_joined}
+hourly_cal_int <- merge(hourly_calories, hourly_intensities, by = c("Id", "ActivityHour"))
+hourly_combined <- merge(hourly_cal_int, hourly_steps, by = c("Id", "ActivityHour"))
+hourly_combined$ActivityHour <- mdy_hms(hourly_combined$ActivityHour)
+hourly_combined$ActivityHour <- format(hourly_combined$ActivityHour, "%d/%m/%Y %H:%M:%S")
+
+```
+
+**Splitting date and time in separate columns**  
+
+Further when doing analysis I'll need date and time in separate columns. I'll prepare and run the code for this now.
+
+```{r split_hourly_date_time}
+hourly_combined <- hourly_combined %>% 
+  separate(ActivityHour, into = c("date", "time"), sep= " ") %>%
+  mutate(date = dmy(date))
+```
+
+<br>
+
+#### **Data analysis**
+
+To begin analysis I'll look through summaries of main datasets to see overall statistics.
+
+```{r Data summaries}
+summary(daily_activity)
+summary(daily_sleep)
+summary(hourly_combined)
+```
+
+When exploring daily sleep data (after most drastic outliers have been removed) we can see that average sleep time per day is 7h13min. Based on [NHS website](https://www.nhs.uk/conditions/insomnia/) recommended amount of daily sleep for adults is 7-9h. Based on this dataset, the average amount of sleep falls on the lower end of the recommended spectrum. Another interesting data point is the lowest amount of daily sleep, which is just 152 minutes. This data point potentially could be inaccurate if device ran out of battery during the night or if it was removed in middle of the night due to discomfort or other reasons. However, if this data point is correct (along with several other similar data points from this column) then there could be sleep related problems. According to [Fortunebusinessinsights website](https://www.fortunebusinessinsights.com/fitness-tracker-market-103358) fitness trackers are rarely used for sleep monitoring and vast majority of people use them to track sports activities.  
+
+**Average sleep times**  
+
+To have a better view of average sleep times I've created column chart which shows average sleep time for 19 users (5 disappeared as outliers after data cleaning was done).
+
+```{r average_sleep_visualisation}
+daily_sleep_vis1 <- daily_sleep %>% group_by(Id) %>% summarise(Id_average_sleep = round(mean(TotalMinutesAsleep)))
+daily_sleep_vis1$Id <- as.factor(daily_sleep_vis1$Id)
+ggplot(daily_sleep_vis1) + 
+  geom_col(aes(Id, Id_average_sleep, fill = "Average sleep time for every user")) +
+  scale_fill_manual(values = c("Average sleep time for every user" = "royalblue"), name = "") +
+  geom_hline(aes(yintercept = 434, color = "Average sleep time between all users"), linetype = "dashed", linewidth = 0.4) + 
+  scale_color_manual(values = c("Average sleep time between all users" = "black"), name = " ") +
+  labs(title = "Every users average sleep time", x = "User ID", y = "Time in minutes") + 
+  theme(plot.title = element_text(hjust = 0.5, size = 14, colour = "darkgreen")) +
+  theme(axis.title.y.left = element_text(hjust = 0.1, , vjust = 3, size = 8)) +
+  theme(axis.title.x.bottom = element_text(hjust = 0.1, vjust = 0.001, size = 8)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.2, hjust = 0.3, size = 5)) +
+  theme(axis.text.y = element_text(size = 6))
+```
+
+
+When looking at this chart, we can see that User 3977333714 result stands out with it's significantly lower amount of total sleep. I decided to look more into this and see correlation between daily minutes asleep and daily time in bed.
+
+```{r low_sleep_user_vis}
+low_sleep_user_vis <- daily_sleep %>% filter(Id == 3977333714)
+low_sleep_user_vis$Date <- dmy(low_sleep_user_vis$Date)
+low_sleep_user_vis$Date <- as.Date(low_sleep_user_vis$Date)
+low_sleep_user_vis <- low_sleep_user_vis %>% arrange(Date)
+ggplot(low_sleep_user_vis) + 
+  geom_col(aes(x = Date, y = TotalTimeInBed, fill = "Time in bed (user with least daily sleep time)"), show.legend = TRUE) + 
+  geom_col(aes(x = Date, y = TotalMinutesAsleep, fill = "Sleep time (user with least daily sleep time)"), show.legend = TRUE) + 
+  labs(title = "Single user - daily sleep time vs total time in bed", x = "Date", y = "Time in minutes") +
+  scale_fill_manual(values = c("Time in bed (user with least daily sleep time)" = "firebrick", "Sleep time (user with least daily sleep time)" = "darkgreen"), name = " ") + 
+  geom_hline(aes(yintercept = 434, color = "Average sleep time between all users"), linetype = "dashed", linewidth = 0.4)+
+  scale_color_manual(values = c("Average sleep time between all users" = "black"), name = "") +
+  theme(plot.title = element_text(hjust = 0.5, size = 14, colour = "darkgreen"))+
+  theme(axis.title.y.left = element_text(hjust = 0.1, , vjust = 3, size = 8)) +
+  theme(axis.title.x.bottom = element_text(hjust = 0.1, vjust = 0.001, size = 8)) +
+  theme(axis.text.x = element_text(angle = 90, size = 5)) +
+  theme(axis.text.y = element_text(size = 6))
+```
+
+Looking at this chart we can see that this user consistently has much lower sleep time when comparing to the actual time in bed. Even though it's unknown how accurate was device that recorded this data, there are surveys and research suggesting that sleep disorders are on the rise in UK. [The sleep charity](https://thesleepcharity.org.uk/get-involved/sleep-manifesto-2024/) research suggests that astounding 9 in 10 people are experiencing trouble with their sleep. Surveys and researches on other websites also suggest very high numbers of sleep disorders.  
+
+<br>
+
+#### **Analysing users hourly data**  
+
+After gaining insights  from daily data I want to look into hourly data. For this I'll use dataframe "hourly_combined" that I made earlier from joining all hourly datasets that I'm interested in. I want to establish hourly activity based on steps taken to see least and most busy hours of the day.
+
+```{r hourly_steps_all_user_average}
+avg_hourly_steps <- mean(hourly_combined$StepTotal, na.rm = TRUE)
+
+hourly_combined_avg <- hourly_combined %>%
+  group_by(time) %>%
+  summarise(steps_average = mean(StepTotal, na.rm = TRUE))
+
+ggplot(hourly_combined_avg) +  # Pass the summarized data to ggplot
+  geom_col(mapping = aes(x = time, y = steps_average, fill = steps_average)) +
+  geom_hline(aes(yintercept = avg_hourly_steps, color = "Average hourly steps throughout the day"), linetype = "dashed", linewidth = 0.4)+
+  geom_hline(yintercept = avg_hourly_steps, color = "black", linetype = "dashed", linewidth = 0.4) +
+  labs(title = "Average steps mapped (All users combined)", x = "Time of the day", y = "Average hourly steps") +
+  theme(plot.title = element_text(hjust = 0.5, size = 14, colour = "darkgreen"))+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.1, size = 5))+
+  theme(axis.text.y = element_text(size = 5))+
+  scale_fill_gradient(low = "green", high = "red", name = "Hourly steps heatmap")+
+  scale_color_manual(values = c("Average hourly steps throughout the day" = "black"), name = "")
+  
+```
+
+When we look at this histogram with heatmap, we can quickly see the most and least active hours of the day. As expected times between 11PM and 6AM have the least activity. The most activity is between 5PM and 8PM. These hours also tend to be most busy in local gyms when people go for daily workout straight after the work.  
+
+#### **Summary and recommendations**  
+
+After reviewing all available Fitbit tracker data I've gained some useful insights that can be used for high level recommendations to Bellabeat company. Most interesting insights I found when working with sleep data. Even though most users are using fitness trackers for running and sports, there's a growing problem of sleep issues within UK population. [The sleep charity website](https://thesleepcharity.org.uk/get-involved/sleep-manifesto-2024/) has done research with significant insights on this topic. Only 1 in 3 people with insomnia have been diagnosed with condition. 6 years is the length of time people are experiencing sleep issues for (on average), without seeking support for them. And this problem could be addressed by Bellabeat. Bellabeat device could improve detection of sleep conditions and provide recommendations for improvement.
+
+**I would advise following :**  
+
+* Improve Bellabeat smart device sensors to detect different sleep related issues (apnea, snoring etc)
+* Recruit sleep specialist to provide recommendations for improving various sleep issues
+* Provide tailored recommendations to users on Bellabeat app (depending on recorded results overnight)
+* Every morning app can provide optional notifications that show time in bed vs time asleep and quality of sleep
+* In severe cases of sleep conditions app could make suggestion to contact medical professional
+
+After reviewing various sources of data through this analysis, I believe Bellabeat would provide important service to users by implementing these recommendations. 
+
+When we consider hourly steps and activity, patterns emerge that could be addressed. 
+
+* When 5PM is approaching, could send app notification with current daily steps that have been done and target steps, which can serve as target for gym workout or evening run. Target could be individually tailored from each users app data or it could be based on general recommendations. [PubMed research](https://pubmed.ncbi.nlm.nih.gov/20551485/) and other sources suggest as reasonable target to do 10,000 steps a day, which study showed to have various health benefits. However this target can vary for users of different age. [BMC study](https://ijbnpa.biomedcentral.com/articles/10.1186/1479-5868-8-79) shows various targets for different age groups.
+* App could make calendar comppilation of daily steps, intensity, calories and create achievement system for various milestones (e.g. New daily step record, New weekly burned calories record, Most intense workout, etc). Achievement system would motivate users to reach new goals and improve their wellbeing in process.
+
+**Thank you for reading!**
